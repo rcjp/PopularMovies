@@ -51,7 +51,7 @@ public class MainActivityFragment extends Fragment {
         super.onStart();
         // get the latest movie info - gets called when coming back from changing preferences
         FetchMovieInfoTask fetchMovieInfoTask = new FetchMovieInfoTask();
-        fetchMovieInfoTask.execute("sfd");
+        fetchMovieInfoTask.execute();
     }
 
     @Override
@@ -78,21 +78,14 @@ public class MainActivityFragment extends Fragment {
 
                     startActivity(intent);
                 } catch (JSONException e) {
-//                    Log.e(LOG_TAG, e.getMessage(), e);
                     e.printStackTrace();
                 }
-
-                // Sending image id to FullScreenActivity
-//                Intent i = new Intent(getApplicationContext(), FullImageActivity.class);
-//                 passing array index
-//                i.putExtra("id", position);
-//                startActivity(i);
             }
         });
 
         FetchMovieInfoTask fetchMovieInfoTask = new FetchMovieInfoTask();
 
-        fetchMovieInfoTask.execute("test"); //todo remove string
+        fetchMovieInfoTask.execute();
         return rootView;
     }
 
@@ -123,22 +116,9 @@ public class MainActivityFragment extends Fragment {
                 // if it's not recycled, initialize some attributes
                 imageView = new ImageView(mContext);
                 imageView.setAdjustViewBounds(true);   // need this to make images tile
-//                imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
             } else {
                 imageView = (ImageView) convertView;
             }
-
-            /*
-            // Construct URL for images from the moview database
-            Uri.Builder uri = new Uri.Builder();
-            uri.scheme("http")
-                    .authority("image.tmdb.org")
-                    .appendPath("t")
-                    .appendPath("p")
-                    .appendPath("w185")
-                    .appendEncodedPath(mPosterLocations.get(position))
-                    .build();
-            String imageURLStr = uri.toString();*/
 
             String imageURLStr = getMoviePostersURL(position);
 
@@ -153,14 +133,10 @@ public class MainActivityFragment extends Fragment {
         }
     }
 
-    public class FetchMovieInfoTask extends AsyncTask<String, Void, String[]> {
+    public class FetchMovieInfoTask extends AsyncTask<Void, Void, String[]> {
         private final String LOG_TAG = FetchMovieInfoTask.class.getSimpleName();
 
-        /*public FetchWeatherTask(Activity myActivity){
-            context = myActivity;
-        }*/
-
-        protected String[] doInBackground(String... postcodes) {
+        protected String[] doInBackground(Void... nothing) {
             // These two need to be declared outside the try/catch
             // so that they can be closed in the finally block.
             HttpURLConnection urlConnection = null;
@@ -173,12 +149,6 @@ public class MainActivityFragment extends Fragment {
             String sortby = sharedPrefs.getString(
                     getString(R.string.pref_sort_key),
                     getString(R.string.pref_sort_popular));
-
-//            String sortby;
-//            if (unitType.equals(getString(R.string.pref_sort_popular))) {
-//                sortby = getString(R.string.pref_sort_label_popular);
-//            }
-            Log.v("vvvvvvvvvv", "sort=" + sortby);
 
             // README
             // ======
@@ -195,7 +165,6 @@ public class MainActivityFragment extends Fragment {
                         .appendPath("discover")
                         .appendPath("movie")
                         .appendQueryParameter("sort_by", sortby)
-//                        .appendQueryParameter("sort_by", "popularity.desc")
                         .appendQueryParameter("api_key", getActivity().getString(R.string.moviedbAPIKEY))
                         .build();
 
@@ -359,7 +328,7 @@ public class MainActivityFragment extends Fragment {
                 .appendPath("w185")
                 .appendEncodedPath(mPosterLocations.get(position))
                 .build();
-        String imageURLStr = uri.toString();
-        return imageURLStr;
+
+        return uri.toString();
     }
 }

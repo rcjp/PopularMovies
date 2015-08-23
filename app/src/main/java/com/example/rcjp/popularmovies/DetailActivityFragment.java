@@ -39,13 +39,10 @@ public class DetailActivityFragment extends Fragment {
             // Use Picasso to cache load the images for movies
             try {
                 ImageView imageView = ((ImageView) detailView.findViewById(R.id.movie_poster));
-//                Picasso.with(container.getContext()).load(imageURLStr).into(imageView);
                 Picasso.with(detailView.getContext()).load(imageURLStr).into(imageView);
             } catch (Exception e) {
-//                Log.e(LOG_TAG, "Error loading image from:" + imageURLStr);
                 e.printStackTrace();
             }
-            Log.v("YYYYYYYYYYY", imageURLStr);
         }
         return detailView;
     }
