@@ -2,9 +2,11 @@ package com.example.rcjp.popularmovies;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -42,6 +44,14 @@ public class MainActivityFragment extends Fragment {
 
     public MainActivityFragment() {
         mPosterLocations = new ArrayList<>();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        // get the latest movie info - gets called when coming back from changing preferences
+        FetchMovieInfoTask fetchMovieInfoTask = new FetchMovieInfoTask();
+        fetchMovieInfoTask.execute("sfd");
     }
 
     @Override
@@ -159,6 +169,17 @@ public class MainActivityFragment extends Fragment {
             // Will contain the raw JSON response as a string.
             String movieJsonStr = null;
 
+            SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+            String sortby = sharedPrefs.getString(
+                    getString(R.string.pref_sort_key),
+                    getString(R.string.pref_sort_popular));
+
+//            String sortby;
+//            if (unitType.equals(getString(R.string.pref_sort_popular))) {
+//                sortby = getString(R.string.pref_sort_label_popular);
+//            }
+            Log.v("vvvvvvvvvv", "sort=" + sortby);
+
             // README
             // ======
             // R.string.moviedbAPIKEY is a private string unique to each developer available from www.themoviedb.org
@@ -173,7 +194,8 @@ public class MainActivityFragment extends Fragment {
                         .appendPath("3")
                         .appendPath("discover")
                         .appendPath("movie")
-                        .appendQueryParameter("sort_by", "popularity.desc")
+                        .appendQueryParameter("sort_by", sortby)
+//                        .appendQueryParameter("sort_by", "popularity.desc")
                         .appendQueryParameter("api_key", getActivity().getString(R.string.moviedbAPIKEY))
                         .build();
 
