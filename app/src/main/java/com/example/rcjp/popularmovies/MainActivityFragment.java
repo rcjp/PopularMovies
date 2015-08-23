@@ -37,7 +37,7 @@ public class MainActivityFragment extends Fragment {
     ImageAdapter imageAdapter;
 
     public MainActivityFragment() {
-        mPosterLocations = new ArrayList<String>();
+        mPosterLocations = new ArrayList<>();
     }
 
     @Override
@@ -125,6 +125,13 @@ public class MainActivityFragment extends Fragment {
             // Will contain the raw JSON response as a string.
             String movieJsonStr = null;
 
+            // README
+            // ======
+            // R.string.moviedbAPIKEY is a private string unique to each developer available from www.themoviedb.org
+            // To build this project create a project string resource called private_string.xml as
+            //<resources>
+            //<string name="moviedbAPIKEY">"..insert your API key here.."</string>
+            //</resources>
             try {
                 Uri.Builder uri = new Uri.Builder();
                 uri.scheme("http")
