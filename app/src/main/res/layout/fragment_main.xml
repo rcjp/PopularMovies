@@ -1,0 +1,22 @@
+<GridView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/grid_view"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:stretchMode="columnWidth"
+    android:gravity="center"
+    android:numColumns="3"
+    android:scrollbars="vertical"
+    android:verticalSpacing="0dp"
+    android:horizontalSpacing="0dp"
+    android:scaleType="centerCrop"
+    tools:context=".MainActivityFragment">
+</GridView>
+    <!--android:numColumns="auto_fit"-->
+    <!--android:columnWidth="90dp"-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="match_parent"-->
+    <!--android:verticalSpacing="5dp"-->
+    <!--android:horizontalSpacing="5dp"-->
+
+    <!--android:stretchMode="columnWidth"-->
