@@ -1,6 +1,7 @@
 package com.example.rcjp.popularmovies;
 
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -9,6 +10,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
@@ -34,7 +37,8 @@ import java.util.List;
  */
 public class MainActivityFragment extends Fragment {
     ArrayList<String> mPosterLocations;
-    ImageAdapter imageAdapter;
+    ImageAdapter mImageAdapter;
+    private String mMovieJSONStr;
 
     public MainActivityFragment() {
         mPosterLocations = new ArrayList<>();
@@ -46,8 +50,35 @@ public class MainActivityFragment extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
         GridView gridview = (GridView) rootView.findViewById(R.id.grid_view);
-        imageAdapter = new ImageAdapter(getActivity());
-        gridview.setAdapter(imageAdapter);
+        mImageAdapter = new ImageAdapter(getActivity());
+        gridview.setAdapter(mImageAdapter);
+        gridview.setClickable(true);
+
+        gridview.setOnItemClickListener(new OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
+
+                try {
+                    Intent intent = new Intent(getActivity(), DetailActivity.class);
+                    intent.putExtra("title", getMovieTitleFromJSON(mMovieJSONStr, position));
+                    intent.putExtra("date", getMovieDateFromJSON(mMovieJSONStr, position));
+                    intent.putExtra("rating", getMovieRatingFromJSON(mMovieJSONStr, position));
+                    intent.putExtra("synopsis", getMovieSynopsisFromJSON(mMovieJSONStr, position));
+                    intent.putExtra("imageURL", getMoviePostersURL(position));
+
+                    startActivity(intent);
+                } catch (JSONException e) {
+//                    Log.e(LOG_TAG, e.getMessage(), e);
+                    e.printStackTrace();
+                }
+
+                // Sending image id to FullScreenActivity
+//                Intent i = new Intent(getApplicationContext(), FullImageActivity.class);
+//                 passing array index
+//                i.putExtra("id", position);
+//                startActivity(i);
+            }
+        });
 
         FetchMovieInfoTask fetchMovieInfoTask = new FetchMovieInfoTask();
 
@@ -87,6 +118,7 @@ public class MainActivityFragment extends Fragment {
                 imageView = (ImageView) convertView;
             }
 
+            /*
             // Construct URL for images from the moview database
             Uri.Builder uri = new Uri.Builder();
             uri.scheme("http")
@@ -96,13 +128,15 @@ public class MainActivityFragment extends Fragment {
                     .appendPath("w185")
                     .appendEncodedPath(mPosterLocations.get(position))
                     .build();
-            String imageURLStr = uri.toString();
+            String imageURLStr = uri.toString();*/
+
+            String imageURLStr = getMoviePostersURL(position);
 
             // Use Picasso to cache load the images for movies
             try {
                 Picasso.with(mContext).load(imageURLStr).into(imageView);
             } catch (Exception e) {
-                Log.e (LOG_TAG,"Error loading image from:"+imageURLStr);
+                Log.e(LOG_TAG, "Error loading image from:" + imageURLStr);
                 e.printStackTrace();
             }
             return imageView;
@@ -172,6 +206,7 @@ public class MainActivityFragment extends Fragment {
                     movieJsonStr = null;
                 }
                 movieJsonStr = buffer.toString();
+                mMovieJSONStr = movieJsonStr;
                 Log.v(LOG_TAG, "Movie JSON:" + movieJsonStr);
 
             } catch (IOException e) {
@@ -199,22 +234,6 @@ public class MainActivityFragment extends Fragment {
             return null;
         }
 
-        private String[] getMoviePostersFromJSON(String movieJSONStr) throws JSONException {
-            // These are the names of the JSON objects that need to be extracted.
-            final String MOVIEDB_RESULTS = "results";
-            final String MOVIEDB_POSTER = "poster_path";
-
-            JSONObject moviesJSON = new JSONObject(movieJSONStr);
-            JSONArray movieArray = moviesJSON.getJSONArray(MOVIEDB_RESULTS);
-
-            String[] resultStrs = new String[movieArray.length()];
-            for(int i = 0; i < movieArray.length(); i++) {
-                JSONObject movieJSON = movieArray.getJSONObject(i);
-                resultStrs[i] = movieJSON.getString(MOVIEDB_POSTER);
-                Log.v(LOG_TAG, resultStrs[i]);
-            }
-            return resultStrs;
-        }
         @Override
         protected void onPostExecute(String[] strings) {
             if (strings != null) {
@@ -222,10 +241,103 @@ public class MainActivityFragment extends Fragment {
 
                 mPosterLocations.clear();
                 mPosterLocations.addAll(posters);
-                imageAdapter.notifyDataSetChanged();
+                mImageAdapter.notifyDataSetChanged();
             }
             super.onPostExecute(strings);
         }
 
+    }
+
+    private String[] getMoviePostersFromJSON(String movieJSONStr) throws JSONException {
+        // These are the names of the JSON objects that need to be extracted.
+        final String MOVIEDB_RESULTS = "results";
+        final String MOVIEDB_POSTER = "poster_path";
+
+        JSONArray movieArray = new JSONObject(movieJSONStr).getJSONArray(MOVIEDB_RESULTS);
+
+        String[] resultStrs = new String[movieArray.length()];
+        for (int i = 0; i < movieArray.length(); i++) {
+            JSONObject movieJSON = movieArray.getJSONObject(i);
+            resultStrs[i] = movieJSON.getString(MOVIEDB_POSTER);
+        }
+        return resultStrs;
+    }
+
+    private String getMovieTitleFromJSON(String movieJSONStr, int position) throws JSONException {
+        // These are the names of the JSON objects that need to be extracted.
+        final String MOVIEDB_RESULTS = "results";
+        final String MOVIEDB_TITLE = "original_title";
+
+        JSONArray movieArray = new JSONObject(movieJSONStr).getJSONArray(MOVIEDB_RESULTS);
+
+        String title = "";
+        if (position < movieArray.length()) {
+            JSONObject movieJSON = movieArray.getJSONObject(position);
+            title = movieJSON.getString(MOVIEDB_TITLE);
+        }
+
+        return title;
+    }
+
+    private String getMovieDateFromJSON(String movieJSONStr, int position) throws JSONException {
+        // These are the names of the JSON objects that need to be extracted.
+        final String MOVIEDB_RESULTS = "results";
+        final String MOVIEDB_DATE = "release_date";
+
+        JSONArray movieArray = new JSONObject(movieJSONStr).getJSONArray(MOVIEDB_RESULTS);
+
+        String date = "";
+        if (position < movieArray.length()) {
+            JSONObject movieJSON = movieArray.getJSONObject(position);
+            date = movieJSON.getString(MOVIEDB_DATE);
+        }
+
+        return date;
+    }
+
+    private String getMovieSynopsisFromJSON(String movieJSONStr, int position) throws JSONException {
+        // These are the names of the JSON objects that need to be extracted.
+        final String MOVIEDB_RESULTS = "results";
+        final String MOVIEDB_SYNOPSIS = "overview";
+
+        JSONArray movieArray = new JSONObject(movieJSONStr).getJSONArray(MOVIEDB_RESULTS);
+
+        String synopsis = "";
+        if (position < movieArray.length()) {
+            JSONObject movieJSON = movieArray.getJSONObject(position);
+            synopsis = movieJSON.getString(MOVIEDB_SYNOPSIS);
+        }
+
+        return synopsis;
+    }
+
+    private double getMovieRatingFromJSON(String movieJSONStr, int position) throws JSONException {
+        // These are the names of the JSON objects that need to be extracted.
+        final String MOVIEDB_RESULTS = "results";
+        final String MOVIEDB_RATING = "vote_average";
+
+        JSONArray movieArray = new JSONObject(movieJSONStr).getJSONArray(MOVIEDB_RESULTS);
+
+        double rating = 0.0;
+        if (position < movieArray.length()) {
+            JSONObject movieJSON = movieArray.getJSONObject(position);
+            rating = movieJSON.getDouble(MOVIEDB_RATING);
+        }
+
+        return rating;
+    }
+
+    private String getMoviePostersURL(int position) {
+        // Construct URL for images from the moview database
+        Uri.Builder uri = new Uri.Builder();
+        uri.scheme("http")
+                .authority("image.tmdb.org")
+                .appendPath("t")
+                .appendPath("p")
+                .appendPath("w185")
+                .appendEncodedPath(mPosterLocations.get(position))
+                .build();
+        String imageURLStr = uri.toString();
+        return imageURLStr;
     }
 }
