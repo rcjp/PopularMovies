@@ -34,9 +34,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
- * A placeholder fragment containing a simple view.
+ *  Main activity displaying tiles of movie posters
  */
-//public class MainActivityFragment extends Fragment {
 public class MainActivityFragment extends Fragment {
     ArrayList<String> mPosterLocations;  // list of all movie poster image http locations
     // set by FetchMovieInfoTask or parcel
@@ -53,7 +52,6 @@ public class MainActivityFragment extends Fragment {
         // extra things to save to bundle when destroying
         outState.putStringArrayList("movies", mPosterLocations);
         outState.putString("moviesJSON", mMovieJSONStr);
-//        outState.putParcelableArrayList("movies", mPosterLocations);
         super.onSaveInstanceState(outState);
     }
 
