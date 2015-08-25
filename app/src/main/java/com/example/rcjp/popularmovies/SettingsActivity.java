@@ -1,6 +1,5 @@
 package com.example.rcjp.popularmovies;
 
-
 import android.os.Bundle;
 import android.preference.ListPreference;
 import android.preference.Preference;
@@ -63,8 +62,6 @@ public class SettingsActivity extends PreferenceActivity
             // For other preferences, set the summary to the value's simple string representation.
             preference.setSummary(stringValue);
         }
-
-        Log.v("GGGGGGG", "GGG");
         return true;
     }
 

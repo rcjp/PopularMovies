@@ -32,31 +32,60 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * A placeholder fragment containing a simple view.
  */
+//public class MainActivityFragment extends Fragment {
 public class MainActivityFragment extends Fragment {
-    ArrayList<String> mPosterLocations;
-    ImageAdapter mImageAdapter;
+    ArrayList<String> mPosterLocations;  // list of all movie poster image http locations
+    // set by FetchMovieInfoTask or parcel
+    ImageAdapter mImageAdapter;          // used for background Async task to notify data changes
     private String mMovieJSONStr;
+    private static String mSortby;              // used to keep the current movie sort order
 
     public MainActivityFragment() {
         mPosterLocations = new ArrayList<>();
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        // get the latest movie info - gets called when coming back from changing preferences
-        FetchMovieInfoTask fetchMovieInfoTask = new FetchMovieInfoTask();
-        fetchMovieInfoTask.execute();
+    public void onSaveInstanceState(Bundle outState) {
+        // extra things to save to bundle when destroying
+        outState.putStringArrayList("movies", mPosterLocations);
+        outState.putString("moviesJSON", mMovieJSONStr);
+//        outState.putParcelableArrayList("movies", mPosterLocations);
+        super.onSaveInstanceState(outState);
+    }
+
+    public int describeContents() {
+        return 0;
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public void onStart() {
+        super.onStart();
+        //
+        // only way I know of checking the sort preferences have changed in the
+        // SettingsActivity is to check here in onStart which gets called when coming back
+        // from the settings page, hmmm hope there is a better way to do this
+        //
+        SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String sortby = sharedPrefs.getString(
+                getString(R.string.pref_sort_key),
+                getString(R.string.pref_sort_popular));
+
+        if (!sortby.equals(mSortby)) {
+            // sort order has changed, need to re-get the movie data from server
+            FetchMovieInfoTask fetchMovieInfoTask = new FetchMovieInfoTask();
+            fetchMovieInfoTask.execute();
+        }
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater,
+                             ViewGroup container,
                              Bundle savedInstanceState) {
+
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
         GridView gridview = (GridView) rootView.findViewById(R.id.grid_view);
@@ -70,10 +99,10 @@ public class MainActivityFragment extends Fragment {
 
                 try {
                     Intent intent = new Intent(getActivity(), DetailActivity.class);
-                    intent.putExtra("title", getMovieTitleFromJSON(mMovieJSONStr, position));
-                    intent.putExtra("date", getMovieDateFromJSON(mMovieJSONStr, position));
+                    intent.putExtra("title", getMovieInfoStringFromJSON(mMovieJSONStr, "original_title", position));
+                    intent.putExtra("date", getMovieInfoStringFromJSON(mMovieJSONStr, "release_date", position));
                     intent.putExtra("rating", getMovieRatingFromJSON(mMovieJSONStr, position));
-                    intent.putExtra("synopsis", getMovieSynopsisFromJSON(mMovieJSONStr, position));
+                    intent.putExtra("synopsis", getMovieInfoStringFromJSON(mMovieJSONStr, "overview", position));
                     intent.putExtra("imageURL", getMoviePostersURL(position));
 
                     startActivity(intent);
@@ -83,9 +112,17 @@ public class MainActivityFragment extends Fragment {
             }
         });
 
-        FetchMovieInfoTask fetchMovieInfoTask = new FetchMovieInfoTask();
+        // recover the poster locations and moviedb info if just rotating device
+        if (savedInstanceState == null
+                || !savedInstanceState.containsKey("movies")
+                || !savedInstanceState.containsKey("moviesJSON")) {
+            FetchMovieInfoTask fetchMovieInfoTask = new FetchMovieInfoTask();
+            fetchMovieInfoTask.execute();
+        } else {
+            mPosterLocations = savedInstanceState.getStringArrayList("movies");
+            mMovieJSONStr = savedInstanceState.getString("moviesJSON");
+        }
 
-        fetchMovieInfoTask.execute();
         return rootView;
     }
 
@@ -142,13 +179,11 @@ public class MainActivityFragment extends Fragment {
             HttpURLConnection urlConnection = null;
             BufferedReader reader = null;
 
-            // Will contain the raw JSON response as a string.
-            String movieJsonStr = null;
-
             SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
             String sortby = sharedPrefs.getString(
                     getString(R.string.pref_sort_key),
                     getString(R.string.pref_sort_popular));
+            mSortby = sortby; // keep a record of what order we last fetched the data in
 
             // README
             // ======
@@ -180,7 +215,7 @@ public class MainActivityFragment extends Fragment {
                 StringBuffer buffer = new StringBuffer();
                 if (inputStream == null) {
                     // Nothing to do.
-                    movieJsonStr = null;
+                    mMovieJSONStr = null;
                 }
                 reader = new BufferedReader(new InputStreamReader(inputStream));
 
@@ -194,11 +229,9 @@ public class MainActivityFragment extends Fragment {
 
                 if (buffer.length() == 0) {
                     // Stream was empty.  No point in parsing.
-                    movieJsonStr = null;
+                    mMovieJSONStr = null;
                 }
-                movieJsonStr = buffer.toString();
-                mMovieJSONStr = movieJsonStr;
-                Log.v(LOG_TAG, "Movie JSON:" + movieJsonStr);
+                mMovieJSONStr = buffer.toString();
 
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
@@ -217,7 +250,7 @@ public class MainActivityFragment extends Fragment {
             }
             // Parse the movie database JSON strings to pull out the http image locations
             try {
-                return getMoviePostersFromJSON(movieJsonStr);
+                return getMoviePostersFromJSON(mMovieJSONStr);
             } catch (JSONException e) {
                 Log.e(LOG_TAG, e.getMessage(), e);
                 e.printStackTrace();
@@ -228,10 +261,9 @@ public class MainActivityFragment extends Fragment {
         @Override
         protected void onPostExecute(String[] strings) {
             if (strings != null) {
-                List<String> posters = new ArrayList<>(Arrays.asList(strings));
-
                 mPosterLocations.clear();
-                mPosterLocations.addAll(posters);
+                mPosterLocations.addAll(Arrays.asList(strings));
+
                 mImageAdapter.notifyDataSetChanged();
             }
             super.onPostExecute(strings);
@@ -254,52 +286,19 @@ public class MainActivityFragment extends Fragment {
         return resultStrs;
     }
 
-    private String getMovieTitleFromJSON(String movieJSONStr, int position) throws JSONException {
+    private String getMovieInfoStringFromJSON(String movieJSONStr, String info, int position) throws JSONException {
         // These are the names of the JSON objects that need to be extracted.
         final String MOVIEDB_RESULTS = "results";
-        final String MOVIEDB_TITLE = "original_title";
 
         JSONArray movieArray = new JSONObject(movieJSONStr).getJSONArray(MOVIEDB_RESULTS);
 
-        String title = "";
+        String result = "";
         if (position < movieArray.length()) {
             JSONObject movieJSON = movieArray.getJSONObject(position);
-            title = movieJSON.getString(MOVIEDB_TITLE);
+            result = movieJSON.getString(info);
         }
 
-        return title;
-    }
-
-    private String getMovieDateFromJSON(String movieJSONStr, int position) throws JSONException {
-        // These are the names of the JSON objects that need to be extracted.
-        final String MOVIEDB_RESULTS = "results";
-        final String MOVIEDB_DATE = "release_date";
-
-        JSONArray movieArray = new JSONObject(movieJSONStr).getJSONArray(MOVIEDB_RESULTS);
-
-        String date = "";
-        if (position < movieArray.length()) {
-            JSONObject movieJSON = movieArray.getJSONObject(position);
-            date = movieJSON.getString(MOVIEDB_DATE);
-        }
-
-        return date;
-    }
-
-    private String getMovieSynopsisFromJSON(String movieJSONStr, int position) throws JSONException {
-        // These are the names of the JSON objects that need to be extracted.
-        final String MOVIEDB_RESULTS = "results";
-        final String MOVIEDB_SYNOPSIS = "overview";
-
-        JSONArray movieArray = new JSONObject(movieJSONStr).getJSONArray(MOVIEDB_RESULTS);
-
-        String synopsis = "";
-        if (position < movieArray.length()) {
-            JSONObject movieJSON = movieArray.getJSONObject(position);
-            synopsis = movieJSON.getString(MOVIEDB_SYNOPSIS);
-        }
-
-        return synopsis;
+        return result;
     }
 
     private double getMovieRatingFromJSON(String movieJSONStr, int position) throws JSONException {
